@@ -114,7 +114,9 @@ int initSemaphore(FoodPlace *mercadoChino){
     int error = 0;
     char str[50];
 
-    mercadoChino->semQueue = sem_open("/semQueue", O_CREAT, O_RDWR, 1);
+    // mercadoChino->semQueue = sem_open("/semQueue", O_CREAT, O_RDWR, 1);
+    mercadoChino->semQueue = sem_open("/semQueue", O_CREAT, O_RDWR, 3);
+
 
     if(mercadoChino->semQueue == SEM_FAILED) {
         perror("/semQueue");
@@ -158,7 +160,7 @@ int initSemaphore(FoodPlace *mercadoChino){
     }
 
     
-    sem_wait(mercadoChino->semQueue);
+    // sem_wait(mercadoChino->semQueue);
 
 
     
@@ -254,7 +256,7 @@ void *clientThread(void *arg){
         sem_wait(mercadoChino->cashier[num_cajero].semServed);
         printf("El Cliente %d se retira con su orden\r\n",client->id);
         /* Libero el lugar en la cola para que pase el siguiente */
-        // sem_post(mercadoChino->semQueue);
+        sem_post(mercadoChino->semQueue);
 
     } else{
         printf("El Cliente %d se canso de esperar\r\n",client->id);
@@ -265,17 +267,26 @@ void *clientThread(void *arg){
 
 void *cashierThread(void *arg){
     Cashier *cashier = (Cashier *)arg;
-    sem_post(cashier->semQueue);
+    // sem_post(cashier->semQueue);
     while (1){
-        if(cashier->ocupado == 0){
+        // if(cashier->ocupado == 0){
             
-            pthread_t cook,checkout;
-            pthread_create(&cook,NULL,cookThread,cashier);
-            pthread_create(&checkout,NULL,checkoutThread,cashier);
-            pthread_join(checkout,NULL);
-            sem_post(cashier->semQueue);
-        }
+        //     pthread_t cook,checkout;
+        //     pthread_create(&cook,NULL,cookThread,cashier);
+        //     pthread_create(&checkout,NULL,checkoutThread,cashier);
+        //     pthread_join(checkout,NULL);
+        //     sem_post(cashier->semQueue);
+        // }
         
+
+        pthread_t cook,checkout;
+        pthread_create(&cook,NULL,cookThread,cashier);
+        pthread_create(&checkout,NULL,checkoutThread,cashier);
+        pthread_join(checkout,NULL);
+        // sem_post(cashier->semQueue);
+
+
+
     }
 
     pthread_exit(NULL);
@@ -287,7 +298,7 @@ void *cookThread(void *arg){
     cashier->ocupado = 1;
     printf("Cocinando %s por Cajero %d\r\n",cashier->client->order->name,cashier->id);
     sleep(cashier->client->order->prepTime);
-    printf("Pedido Cocinado por Cajero %d\r\n",cashier->id + 1);
+    printf("Pedido del Cliente %d cocinado por Cajero %d\r\n",cashier->client->id,cashier->id);
     sem_post(cashier->semCheckout);
 
     pthread_exit(NULL);
